@@ -29,4 +29,13 @@ app.use(express.static("public"));
 
 app.use(cookieParser());
 
+
+//Routes :
+
+import userRoute from "./routes/user.routes.js";
+
+app.use("/api/v1/users",userRoute) // whenever the url : /api/v1/users is hit , the controll will go the userRoute 
+
+
+
 export { app };
