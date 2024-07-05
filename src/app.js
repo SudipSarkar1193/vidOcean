@@ -12,30 +12,18 @@ app.use(
 	})
 );
 
-app.use(
-	express.json({
-		limit: "16kb",
-	})
-);
+app.use(express.json());
 
-app.use(
-	express.urlencoded({
-		extended: true,
-		limit: "16kb",
-	})
-);
+app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static("public"));
 
-app.use(cookieParser());
-
+app.use(cookieParser()); //We can access cookies from 'req' ;
 
 //Routes :
 
 import userRoute from "./routes/user.routes.js";
 
-app.use("/api/v1/users",userRoute) // whenever the url : /api/v1/users is hit , the controll will go the userRoute 
-
-
+app.use("/api/v1/users", userRoute); // whenever the url : /api/v1/users is hit , the controll will go the userRoute
 
 export { app };
