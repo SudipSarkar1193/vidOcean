@@ -9,11 +9,14 @@ const generateAccessAndRefreshToken = async (userId) => {
 	try {
 		const user = await User.findById(userId);
 
-		const accessToken = user.generateAccessToken;
-		const refreshToken = user.generateRefreshToken;
+		const accessToken = user.generateAccessToken();
+		const refreshToken = user.generateRefreshToken();
 
 		user.refreshToken = refreshToken;
 		await user.save({ validateBeforeSave: false });
+		console.log(user)
+
+		console.log("accessToken",accessToken,"\nRefreshToken",refreshToken)
 
 		return { accessToken, refreshToken };
 	} catch (error) {
@@ -136,7 +139,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
 	}
 
 	//access and referesh token
-	const { accessToken, refreshToken } = generateAccessAndRefreshToken(user._id);
+	const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
 
 	//Get updated version of user :
 	const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
