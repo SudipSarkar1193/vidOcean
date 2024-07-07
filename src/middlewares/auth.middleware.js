@@ -8,8 +8,7 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
 
 	try {
 		const accesToken = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
-		console.log("req.cookies",req.cookies)
-		console.log("Access Token:", accesToken)
+		
 		if (!accesToken) {
 			throw new APIError(401, "Unauthorized request");
 		}
@@ -19,7 +18,7 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
 			process.env.ACCESS_TOKEN_SECRET
 		);  //The jwt.verify function returns the decoded payload of the token if the token is valid and the verification is successful. This payload is a JSON object containing the claims (data) that were encoded in the token.
 
-		console.log("decodedToken",decodedToken)
+		
 
 		const user = await User.findById(decodedToken?._id).select(
 			"-password -refreshToken"
@@ -28,6 +27,7 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
         if (!user) {
             throw new APIError(401, "Invalid Access Token")
         }
+
         req.user = user;
         next();
 

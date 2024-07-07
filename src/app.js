@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import userRoute from "./routes/user.routes.js";
+
 
 const app = express();
 
@@ -22,8 +24,10 @@ app.use(cookieParser()); //We can access cookies from 'req' ;
 
 //Routes :
 
-import userRoute from "./routes/user.routes.js";
+
 
 app.use("/api/v1/users", userRoute); // whenever the url : /api/v1/users is hit , the controll will go the userRoute
 
 export { app };
+
+

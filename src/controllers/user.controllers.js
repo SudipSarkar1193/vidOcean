@@ -14,9 +14,9 @@ const generateAccessAndRefreshToken = async (userId) => {
 
 		user.refreshToken = refreshToken;
 		await user.save({ validateBeforeSave: false });
-		console.log(user)
+		console.log(user);
 
-		console.log("accessToken",accessToken,"\nRefreshToken",refreshToken)
+		console.log("accessToken", accessToken, "\nRefreshToken", refreshToken);
 
 		return { accessToken, refreshToken };
 	} catch (error) {
@@ -28,6 +28,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 	}
 };
 
+//REGISTER ====>>>>
 const registerUser = asyncHandler(async (req, res, next) => {
 	//STEP:1 get user details from frontend
 	const { fullName, email, username, password } = req.body;
@@ -109,6 +110,7 @@ const registerUser = asyncHandler(async (req, res, next) => {
 		.json(new APIResponse(200, createdUser, "User registered Successfully"));
 });
 
+//LOGIN  ========>>>>>>
 const loginUser = asyncHandler(async (req, res, next) => {
 	// req body -> data
 	// username or email
@@ -116,9 +118,9 @@ const loginUser = asyncHandler(async (req, res, next) => {
 	// password check
 
 	const { email, username, password } = req.body;
-	console.log("username:",username);
-	console.log("email:",email);
-	console.log("password:",password);
+	// console.log("username:",username);
+	// console.log("email:",email);
+	// console.log("password:",password);
 
 	if (!username && !email) {
 		throw new APIError(400, "username or email is required");
@@ -139,10 +141,14 @@ const loginUser = asyncHandler(async (req, res, next) => {
 	}
 
 	//access and referesh token
-	const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+	const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+		user._id
+	);
 
 	//Get updated version of user :
-	const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+	const loggedInUser = await User.findById(user._id).select(
+		"-password -refreshToken"
+	);
 	//send cookie
 	const options = {
 		httpOnly: true,
@@ -166,6 +172,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
 		);
 });
 
+//LOGOUT ==========>>>>>
 const logoutUser = asyncHandler(async (req, res) => {
 	const user = req.user;
 
@@ -198,33 +205,35 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 	try {
 		const incomingRefreshToken =
 			req.cookies.refreshToken || req.body.refreshToken;
-	
+
 		if (!incomingRefreshToken) {
 			throw new APIError(401, "unauthorized request");
 		}
-	
+
 		const decodedAccessToken = jwt.verify(
 			incomingRefreshToken,
 			process.env.REFRESH_TOKEN_SECRET
 		);
-	
+
 		const user = await User.findById(decodedAccessToken._id);
-	
+
 		if (!user) {
 			throw new APIError(401, "Invalid refresh token");
 		}
-	
+
 		if (incomingRefreshToken !== user?.refreshToken) {
 			throw new APIError(401, "Refresh token is expired or used");
 		}
-	
-		const { accessToken, refreshToken } = generateAccessAndRefreshToken(user._id);
-	
+
+		const { accessToken, refreshToken } = generateAccessAndRefreshToken(
+			user._id
+		);
+
 		const options = {
 			httpOnly: true,
 			secure: true,
 		};
-	
+
 		return res
 			.status(200)
 			.cookie("accessToken", accessToken, options)
@@ -237,8 +246,124 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 				)
 			);
 	} catch (error) {
-		throw new APIError(401, error?.message || "Invalid refresh token")
+		throw new APIError(401, error?.message || "Invalid refresh token");
 	}
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+	const { oldPassword, newPassword } = req.body;
+
+	if (!(oldPassword && newPassword)) {
+		throw new APIError(400, "Both old and new password is needed");
+	}
+
+	const user = await User.findById(req.user._id);
+
+	if (!(await user.isPasswordCorrect(oldPassword))) {
+		throw new APIError(400, "Wrong password");
+	}
+
+	user.password = newPassword;
+	await user.save({ validateBeforeSave: false });
+
+	return res
+		.status(200)
+		.json(new APIResponse(200, {}, "Password changed successfully"));
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+	return res
+		.status(200)
+		.json(APIResponse(200, req.user, "User retrieved successfully"));
+});
+
+const updateUserDetails = asyncHandler(async (req, res) => {
+	const { fullName, email } = req.body;
+
+	if (!fullName || !email) {
+		throw new APIError(400, "All fields are required");
+	}
+
+	const user = await User.findByIdAndUpdate(
+		req.user?._id,
+		{
+			$set: {
+				fullName,
+				email,
+			},
+		},
+		{ new: true } //The { new: true } option in the findByIdAndUpdate function is used to return the updated document instead of the original one. By default, findByIdAndUpdate returns the document as it was before the update. Setting { new: true } ensures that the updated version of the document is returned.
+	).select("-password");
+
+	return res
+		.status(200)
+		.json(new APIResponse(200, user, "Account details updated successfully"));
+});
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+	const avatarLocalPath = req.files?.path;
+
+	if (!avatarLocalPath) {
+		throw new APIError(400, "Avatar file is missing");
+	}
+
+	const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+	if (!avatar.url) {
+		throw new APIError(400, "Error while uploading on avatar");
+	}
+
+	const user = await User.findByIdAndUpdate(
+		req.user._id,
+		{
+			$set: {
+				avatar: avatar.url,
+			},
+		},
+		{ new: true } //The { new: true } option in the findByIdAndUpdate function is used to return the updated document instead of the original one. By default, findByIdAndUpdate returns the document as it was before the update. Setting { new: true } ensures that the updated version of the document is returned.
+	).select("-password");
+
+	return res
+		.status(200)
+		.json(APIResponse(200, user, "Avatar image updated successfully"));
+});
+
+const updateUserCoverImg = asyncHandler(async (req, res) => {
+	const coverImgLocalPath = req.files?.path;
+
+	if (!coverImgLocalPath) {
+		throw new APIError(400, "Avatar file is missing");
+	}
+
+	const coverImg = await uploadOnCloudinary(coverImgLocalPath);
+
+	if (!coverImg.url) {
+		throw new APIError(400, "Error while uploading on Cover Image ");
+	}
+
+	const user = await User.findByIdAndUpdate(
+		req.user._id,
+		{
+			$set: {
+				coverImage: coverImg.url,
+			},
+		},
+		{ new: true } //The { new: true } option in the findByIdAndUpdate function is used to return the updated document instead of the original one. By default, findByIdAndUpdate returns the document as it was before the update. Setting { new: true } ensures that the updated version of the document is returned.
+	).select("-password");
+
+	return res
+		.status(200)
+		.json(APIResponse(200, user, "Cover image updated successfully"));
+});
+
+export {
+	registerUser,
+	loginUser,
+	logoutUser,
+	changeCurrentPassword,
+	refreshAccessToken,
+	getCurrentUser,
+	updateUserDetails,
+	updateUserAvatar,
+	updateUserCoverImg
+};

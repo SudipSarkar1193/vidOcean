@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+	changeCurrentPassword,
 	loginUser,
 	logoutUser,
 	registerUser,
@@ -23,21 +24,11 @@ router.route("/register").post(
 	registerUser
 );
 
-router.route("/login").post(
-	upload.fields([
-		{
-			name: "avatar",
-			maxCount: 1,
-		},
-		{
-			name: "coverImage",
-			maxCount: 1,
-		},
-	]),
-	loginUser
-);
+router.route("/login").post(loginUser);
 
 //secured routes
 router.route("/logout").post(verifyJWT, logoutUser);
+router.route("/change-password").post(verifyJWT, changeCurrentPassword);
+
 
 export default router;
